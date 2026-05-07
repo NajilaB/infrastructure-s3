@@ -41,7 +41,7 @@ jobs:
           NUMBER: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
           BODY: >
-            O BUCKET S3 FOI CRIADO COM SUCESSO !!!!:D 
+            O BUCKET S3 FOI CRIADO koM SUCESSO !!!!:D 
 
      
 
