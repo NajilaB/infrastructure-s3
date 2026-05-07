@@ -5,43 +5,56 @@ on:
     types:
       - opened
 
+permissions:
+  issues: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Create bucket in S3
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up AWS CLI 
-        uses: aws-actions/configure-aws-credentials@v2  
+        uses: aws-actions/configure-aws-credentials@v4  
         with:
-    
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Extract Bucket Name from Issue
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Extract and sanitize Bucket Name from Issue
         run: |
-          export BUCKET_NAME=$(echo "${{ github.event.issues.title}}")
-          echo "Bucket Name: $BUCKET_NAME"
+          BUCKET_NAME=$(echo "${{ github.event.issue.title }}" \
+            | tr '[:upper:]' '[:lower:]' \
+            | tr -cd 'a-z0-9-')
+
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
 
-      - name: Run Terraform
+
+      - name: Terraform Init
         run: |
-          cd terraform
-          cd s3-bucket-static
-          terraform init
+          cd terraform/s3-bucket-static
+          terraform init -input=false
+
+      - name: Terraform Apply
+        run: |
+          cd terraform/s3-bucket-static
           terraform apply -auto-approve -var="bucket_name=${{ env.BUCKET_NAME }}"
-      
-      - name: Add Comment
-        run: gh issue comment "$NUMBER" --repo "$REPO" --body "$BODY"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          NUMBER: ${{ github.event.issue.number }}
-          REPO: ${{ github.repository }}
-          BODY: >
-            O BUCKET S3 F0I CRIADO COM SUCESSO !!!!:D 
+
+      - name: Add Comment to Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: "✅ S3 bucket created successfully!"
+            })
 
      
 
