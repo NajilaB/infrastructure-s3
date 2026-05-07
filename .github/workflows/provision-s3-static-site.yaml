@@ -2,8 +2,8 @@ name: Create S3 Static Site
 
 on: 
   issues:
-  types:
-    -opened
+    types:
+      -opened
 
 jobs:
   deploy:
